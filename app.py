@@ -1,12 +1,69 @@
 import tempfile
+from collections import deque
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
+import requests
 import streamlit as st
+from bs4 import BeautifulSoup
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 from pypdf import PdfReader
+
+
+def is_valid_http_url(candidate_url):
+    """Return True when the input is an HTTP or HTTPS URL."""
+    parsed = urlparse(candidate_url)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def crawl_internal_pages(start_url, max_pages=10):
+    """Crawl internal links from a website and return plain-text page content."""
+    if not is_valid_http_url(start_url):
+        return []
+
+    target_domain = urlparse(start_url).netloc
+    queue = deque([start_url])
+    visited = set()
+    page_texts = []
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    while queue and len(visited) < max_pages:
+        current_url = queue.popleft()
+        if current_url in visited:
+            continue
+
+        visited.add(current_url)
+
+        try:
+            response = requests.get(current_url, headers=headers, timeout=15)
+            response.raise_for_status()
+        except requests.RequestException:
+            continue
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        for tag in soup(["script", "style", "noscript"]):
+            tag.decompose()
+
+        page_text = soup.get_text(separator="\n", strip=True)
+        if page_text.strip():
+            page_texts.append(page_text)
+
+        for anchor in soup.find_all("a", href=True):
+            href = anchor["href"]
+            next_url = urljoin(current_url, href)
+            parsed_next = urlparse(next_url)
+            if parsed_next.scheme not in {"http", "https"}:
+                continue
+            if parsed_next.netloc != target_domain:
+                continue
+            next_url = next_url.split("#", 1)[0]
+            if next_url not in visited and next_url not in queue:
+                queue.append(next_url)
+
+    return page_texts
 
 
 @st.cache_resource
@@ -66,6 +123,16 @@ def build_rag_system_prompt(context):
     )
 
 
+def build_url_chunks(start_url, chunk_size=800, chunk_overlap=100):
+    """Crawl a website and split the gathered text into retrievable chunks."""
+    scraped_pages = crawl_internal_pages(start_url)
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
+    return splitter.create_documents(scraped_pages)
+
+
 system_prompt_no_doc = "You are a helpful assistant."
 
 
@@ -86,7 +153,26 @@ if "temperature" not in st.session_state:
 if "vectorstore" not in st.session_state:
     st.session_state.vectorstore = None
 
+if "loaded_url" not in st.session_state:
+    st.session_state.loaded_url = ""
+
 with st.sidebar:
+    document_url = st.text_input("Enter a URL:", value="", key="document_url")
+
+    if document_url.strip():
+        if is_valid_http_url(document_url):
+            st.success(f"Loaded: {document_url}")
+            if st.session_state.loaded_url != document_url:
+                with st.spinner("Crawling internal pages..."):
+                    url_chunks = build_url_chunks(document_url)
+                st.session_state.loaded_url = document_url
+                st.session_state.vectorstore = build_vectorstore(url_chunks)
+                st.success(f"Ready! Indexed {len(url_chunks)} URL chunks.")
+        else:
+            st.warning("Please enter a valid HTTP or HTTPS URL.")
+    else:
+        st.info("Input a url to enable document Q&A.")
+
     uploaded_file = st.file_uploader(
         "📄 Upload a Document",
         type=["pdf"],
