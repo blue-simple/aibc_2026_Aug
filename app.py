@@ -139,7 +139,6 @@ with st.sidebar:
 
     if st.button("Clear Conversation"):
         st.session_state.messages = []
-        st.rerun()
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -202,5 +201,3 @@ if prompt:
                 for doc in retrieved_docs:
                     st.write(doc.page_content)
                     st.divider()
-
-    st.rerun()
