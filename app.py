@@ -171,21 +171,19 @@ if prompt:
     response_chunks = []
 
     try:
-        def stream_response():
-            for chunk in client.chat.completions.create(
-                model=st.session_state.selected_model,
-                messages=api_messages,
-                stream=True,
-                temperature=st.session_state.temperature,
-            ):
-                delta = chunk.choices[0].delta.content or ""
-                if delta:
-                    response_chunks.append(delta)
-                    yield delta
-
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                st.write_stream(stream_response())
+                response_placeholder = st.empty()
+                for chunk in client.chat.completions.create(
+                    model=st.session_state.selected_model,
+                    messages=api_messages,
+                    stream=True,
+                    temperature=st.session_state.temperature,
+                ):
+                    delta = chunk.choices[0].delta.content or ""
+                    if delta:
+                        response_chunks.append(delta)
+                        response_placeholder.markdown("".join(response_chunks))
 
         full_reply = "".join(response_chunks)
     except Exception as e:
