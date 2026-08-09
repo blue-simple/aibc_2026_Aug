@@ -11,7 +11,7 @@ def home_page():
     - Upload documents or provide URLs for context
     """)
 
-    st.info("Use the sidebar to navigate to **Login** or **Chatbot**.")
+    st.info("Use the sidebar to navigate to **About Us**, **Methodology**, **Login** or **Chatbot**.")
 
 # Run the home page
 home_page()

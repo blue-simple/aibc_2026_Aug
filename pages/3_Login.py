@@ -1,5 +1,8 @@
 import streamlit as st
 
+# hardcode a password
+set_password = st.secrets["password"]
+
 # Login page 
 def login_page():
     st.title("Login")
@@ -9,13 +12,12 @@ def login_page():
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        if username and password:
+        if username and password == set_password:
             st.session_state["valid_username"] = username
-            st.session_state["valid_password"] = password
             st.session_state["authenticated"] = True
             st.success("Login successful! Go to the Chatbot page.")
         else:
-            st.error("Please enter both username and password.")
+            st.error("Incorrect password. Please retry.")
 
 # Run login page
 login_page()

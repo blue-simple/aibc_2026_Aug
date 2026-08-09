@@ -1,8 +1,8 @@
+from multiprocessing import context
 import tempfile
 from collections import deque
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
-from uuid import uuid4
 
 import requests
 import streamlit as st
@@ -12,33 +12,21 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 from pypdf import PdfReader
+from helper_functions.utility import check_password
 
-# check password
-def check_password(password):
-    # Example: simple password check
-    if password != "Secret123":
-        return False
-    if len(password) < 9:
-        return False
-    if not any(char.isdigit() for char in password):
-        return False
-    return True
-
+# -------------------------------
+# Utility Functions
+# -------------------------------
 def is_valid_http_url(candidate_url):
-    """Return True when the input is an HTTP or HTTPS URL."""
+    """Check if a string is a valid HTTP/HTTPS URL."""
     parsed = urlparse(candidate_url)
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
-# define multiple pages to crawl
-def crawl_internal_pages(start_urls, max_pages=10):
-    """
-    Crawl internal links from multiple websites and return plain-text page content.
-    start_urls: list of URLs to start crawling from
-    max_pages: maximum pages to crawl per domain
-    """
+def crawl_internal_pages(start_urls, max_pages):
+    """Crawl internal links from multiple websites and return plain-text page content."""
     if isinstance(start_urls, str):
-        start_urls = [start_urls]  # allow single URL input too
+        start_urls = [start_urls]
 
     all_page_texts = []
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -56,7 +44,6 @@ def crawl_internal_pages(start_urls, max_pages=10):
             current_url = queue.popleft()
             if current_url in visited:
                 continue
-
             visited.add(current_url)
 
             try:
@@ -89,31 +76,27 @@ def crawl_internal_pages(start_urls, max_pages=10):
 
     return all_page_texts
 
+
 @st.cache_resource
 def build_vectorstore(_chunks):
     """Create a per-session in-memory vector store from document chunks."""
     if not _chunks:
         return None
-
     embeddings = OpenAIEmbeddings(
         model="text-embedding-3-small",
         api_key=st.secrets["OPENAI_API_KEY"],
     )
-    return InMemoryVectorStore.from_documents(
-        documents=_chunks,
-        embedding=embeddings,
-    )
+    return InMemoryVectorStore.from_documents(documents=_chunks, embedding=embeddings)
 
 
 def extend_resource_store(chunks):
     """Append newly loaded resource chunks to the session memory and rebuild the vector store."""
     if not chunks:
         return
-
     current_docs = st.session_state.get("resource_documents", [])
     current_docs.extend(chunks)
-    st.session_state.resource_documents = current_docs
-    st.session_state.vectorstore = build_vectorstore(current_docs)
+    st.session_state["resource_documents"] = current_docs
+    st.session_state["vectorstore"] = build_vectorstore(current_docs)
 
 
 def load_and_split(uploaded_file, chunk_size=800, chunk_overlap=100):
@@ -127,7 +110,6 @@ def load_and_split(uploaded_file, chunk_size=800, chunk_overlap=100):
         text = "\n".join(page.extract_text() or "" for page in reader.pages)
         if not text.strip():
             return []
-
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
@@ -137,68 +119,55 @@ def load_and_split(uploaded_file, chunk_size=800, chunk_overlap=100):
         Path(temp_path).unlink(missing_ok=True)
 
 
-def build_vector_store(uploaded_file):
-    """Create a per-session in-memory vector store from an uploaded PDF."""
-    documents = load_and_split(uploaded_file)
-    if not documents:
-        return None
-
-    embeddings = OpenAIEmbeddings(api_key=st.secrets["OPENAI_API_KEY"])
-    return InMemoryVectorStore.from_documents(
-        documents=documents,
-        embedding=embeddings
-    )
-
-
 def retrieve_context(vectorstore, query, k=4):
-    """Retrieve relevant document chunks from a Chroma vector store."""
+    """Retrieve relevant document chunks from the vector store."""
     retriever = vectorstore.as_retriever(search_kwargs={"k": k})
     docs = retriever.invoke(query)
     joined_context = "\n\n---\n\n".join(doc.page_content for doc in docs)
     return joined_context, docs
 
 
+#def build_rag_system_prompt(context):
+#    """Build a system prompt that instructs the model to answer from the provided URL(s) or PDF(s) first and if that fails then "
+#    "synthesizes a generic answer from Singapore context."""
+#    return (
+#        "You are a social worker assistant based in Singapore. "
+#        "Your role is to provide clear, practical, and supportive answers about Autism Spectrum Disorder (ASD) and related resources. "
+#
+#        "Guidelines: "
+#        "- Ground every response in the combined context from all loaded Singapore websites and uploaded documents. "
+#        "- Ground every response in the combined context from all loaded Singapore websites and uploaded documents. "
+#        "- Synthesize information across sources rather than focusing on a single page or file. "
+#        "- If a detail is not supported by the indexed context, keep answers practical, general, and relevant to the resource landscape of Singapore. "
+#        "- When appropriate, include links to the resources mentioned. "
+#        "- If maps or location references are needed, reference OneMap. "
+#        "- Avoid inventing facts or speculating beyond the provided context.\n\n"
+#        f"Context:\n{context}"
+#    )
+
 def build_rag_system_prompt(context):
-#   """Build a system prompt that instructs the model to answer from the provided context only."""
-    """Build a system prompt that instructs the model to answer from the provided context first and if that fails then "
-    "synthesizes a generic answer across the combined Singapore resource context."""
+    """Build a system prompt that prioritizes answering from the provided URLs/PDFs,
+    and falls back to general Singapore-relevant guidance only when the context is insufficient."""
     return (
-#        "You are a document-grounded assistant. Answer ONLY from the provided context. "
-#        "Never use outside knowledge or make up missing facts. "
-#        "If the information is not in the context, say: "
-#        "I couldn't find that information in the loaded URL or uploaded PDF.\n\n"
-        "You are a Singapore-resource grounded social worker assistant. "
-        "Answer by synthesizing the combined context from all loaded Singapore websites and uploaded documents. "
-        "Provide a generic, helpful response based on the overall resource set rather than only the current page or file. "
-        "If a detail is not clearly supported by the indexed context, say so briefly and avoid inventing facts. "
-        "Keep the answer practical, general, and grounded in the available Singapore resource context and provide the links to the resources. "
-        "If maps are needed, take reference from onemap.\n\n"
+        "You are a social worker assistant based in Singapore. "
+        "Your role is to provide clear, practical, and supportive answers about Autism Spectrum Disorder (ASD) "
+        "and related services, supports, and resources in Singapore.\n\n"
+
+        "Guidelines:\n"
+        "- Use the combined context from all loaded Singapore websites and uploaded documents as your primary source.\n"
+        "- Synthesize information across sources; do not rely on a single page or file when multiple sources are available.\n"
+        "- If the context does not support a detail, respond with practical, general information relevant to Singapore.\n"
+        "- When appropriate, include links to the resources mentioned.\n"
+        "- If location or navigation information is needed, reference OneMap where relevant.\n"
+        "- Do not invent facts, infer unsupported details, or speculate beyond the provided context.\n"
+        "- Keep the tone clear, supportive, and professional.\n\n"
+
         f"Context:\n{context}"
     )
 
-
-#def build_url_chunks(start_url, chunk_size=800, chunk_overlap=100):
-#    """Crawl a website and split the gathered text into retrievable chunks."""
-#    scraped_pages = crawl_internal_pages(start_url)
-#    #urls = [
-#    #"https://www.enablingguide.sg/disability-info/autism",
-#    #"https://www.autism.org.sg/",
-#    #"https://www.asdcollaborative.sg/",
-#    #"https://familiesforlife.sg/pages/FFLPArticle/Young-Children-Supporting-Resources-Special-Children"
-#    #]
-#    #scraped_pages = crawl_internal_pages(urls, max_pages=30)
-#    if not scraped_pages:
-#        return []#
-#
-#    splitter = RecursiveCharacterTextSplitter(
-#        chunk_size=chunk_size,
-#        chunk_overlap=chunk_overlap,
-#    )
-#    return splitter.create_documents(scraped_pages)
-
-def build_url_chunks(start_urls, chunk_size=800, chunk_overlap=100, max_pages=30):
+def build_url_chunks(start_urls, chunk_size=800, chunk_overlap=100, max_pages=20):
     """
-    Crawl one or more websites and split the gathered text into retrievable chunks.
+    Crawl the websites in start_urls and split the gathered text into retrievable chunks.
     start_urls: str or list of URLs
     chunk_size: size of each text chunk
     chunk_overlap: overlap between chunks
@@ -219,44 +188,91 @@ def build_url_chunks(start_urls, chunk_size=800, chunk_overlap=100, max_pages=30
     )
     return splitter.create_documents(scraped_pages)
 
+# 2nd agent to validate against the 1st agent
+def validate_agent_output(output: str, context: str = "") -> dict:
+    """
+    Validate the output of another agent.
+    Returns a dictionary with validation results.
+    """
+    results = {
+        "accuracy": "pass",
+        "format": "pass",
+        "tone": "pass",
+        "safety": "pass",
+        "issues": []
+    }
+
+    # Accuracy check: must reference context if provided
+    if context and "Context:" not in output:
+        results["accuracy"] = "fail"
+        results["issues"].append("Missing context reference.")
+
+    # Format check: must contain bullet points
+    if "-" not in output and "•" not in output:
+        results["format"] = "fail"
+        results["issues"].append("No bullet points found.")
+
+    # Tone check: must be professional
+    if any(word in output.lower() for word in ["lol", "haha", "dumb"]):
+        results["tone"] = "fail"
+        results["issues"].append("Unprofessional tone detected.")
+
+    # Safety check: avoid harmful language
+    if any(word in output.lower() for word in ["kill", "hate"]):
+        results["safety"] = "fail"
+        results["issues"].append("Unsafe language detected.")
+
+    return results
+
+
+
+# -------------------------------
+# Session State Initialization
+# -------------------------------
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+if "valid_username" not in st.session_state:
+    st.session_state["valid_username"] = None
+if "system_prompt" not in st.session_state:
+    st.session_state["system_prompt"] = "You are an experienced social worker assistant."
+if "selected_model" not in st.session_state:
+    st.session_state["selected_model"] = "gpt-4o-mini"
+if "temperature" not in st.session_state:
+    st.session_state["temperature"] = 1.0
+#if "vectorstore" not in st.session_state:
+#    st.session_state["vectorstore"] = None
+#if "resource_documents" not in st.session_state:
+#    st.session_state["resource_documents"] = []
+#if "loaded_urls" not in st.session_state:
+#    st.session_state["loaded_urls"] = []
+
+# -------------------------------
+# Prompts
+# -------------------------------
 system_prompt_no_doc = (
     "You are a helpful Singapore-focused social worker assistant. "
     "Answer in a practical, generic way and avoid claiming source-specific details unless the user has loaded Singapore resource content. "
     "If resource context is missing, keep the response general and clear."
 )
 
-
+# -------------------------------
+# Chatbot Page
+# -------------------------------
 def chatbot_page():
     st.title("Chatbot for Autism related queries")
 
-    # ✅ Initialize session state keys safely
-    if "messages" not in st.session_state:
-        st.session_state.messages = []   # start with an empty list
+    # 🚫 Block access if not logged in
+    if not st.session_state.get("authenticated", False):
+        st.warning("You must log in first on the Login page.")
+        st.stop()
 
-    if "system_prompt" not in st.session_state:
-        st.session_state.system_prompt = "You are an experienced social worker assistant."
+    st.write(f"Welcome, {st.session_state['valid_username']}!")
 
-    if "selected_model" not in st.session_state:
-        st.session_state.selected_model = "gpt-4o-mini"
-
-    if "temperature" not in st.session_state:
-        st.session_state.temperature = 1.0
-
-    if "vectorstore" not in st.session_state:
-        st.session_state.vectorstore = None
-
-    if "resource_documents" not in st.session_state:
-        st.session_state.resource_documents = []
-
-    if "loaded_url" not in st.session_state:
-        st.session_state.loaded_url = ""
-
-    if "loaded_urls" not in st.session_state:
-        st.session_state.loaded_urls = []
-
-# --- Sidebar Controls --- <start>
+    # --- Sidebar controls ---
     with st.sidebar:
-        # Sidebar input: allow comma-separated URLs, to contextual from a few websites
+        # --- Input: allow comma-separated URLs --- <start>
         document_urls = st.text_area(
             "Enter one or more URLs (comma-separated):",
             value="",
@@ -292,8 +308,9 @@ def chatbot_page():
                         )
         else:
             st.info("Input one or more URLs to enable document Q&A.")
+        # --- Input: allow comma-separated URLs --- <end>
 
-        # Sidebar input: allow file upload
+        # --- Input: PDF upload --- <start>
         uploaded_file = st.file_uploader(
             "📄 Upload a Document",
             type=["pdf"],
@@ -317,115 +334,93 @@ def chatbot_page():
                 )
         else:
             st.info("Upload a PDF to enable document Q&A.")
+        # --- Input: PDF upload --- <end>
 
-        # Sidebar input: System setting
+        # Settings
         st.header("⚙️ Settings")
-        system_prompt_value = st.text_area(
-            "System Prompt",
-            value=st.session_state.system_prompt,
-            key="system_prompt_widget",
+        st.session_state["system_prompt"] = st.text_area(
+            "System Prompt", value=st.session_state["system_prompt"]
         )
-        st.session_state.system_prompt = system_prompt_value
-
-        st.session_state.selected_model = st.selectbox(
-            "Model",
-            ["gpt-4o-mini", "gpt-4o"],
-            index=["gpt-4o-mini", "gpt-4o"].index(st.session_state.selected_model),
+        st.session_state["selected_model"] = st.selectbox(
+            "Model", ["gpt-4o-mini", "gpt-4o"], index=0
         )
-
-        st.session_state.temperature = st.slider(
-            "Temperature",
-            min_value=0.0,
-            max_value=2.0,
-            value=st.session_state.temperature,
-            step=0.1,
+        st.session_state["temperature"] = st.slider(
+            "Temperature", 0.0, 2.0, st.session_state["temperature"], 0.1
         )
-
         k_value = st.slider("Chunks to retrieve (k)", 1, 10, 4)
 
+        # Conversation tools
         conversation_text = "\n".join(
-            f"{message['role']}: {message['content']}" for message in st.session_state.messages
+            f"{m['role']}: {m['content']}" for m in st.session_state["messages"]
         )
         st.caption(f"Conversation characters: {len(conversation_text)}")
-
         st.download_button(
-            label="Download Chat",
+            "Download Chat",
             data=conversation_text + "\n",
             file_name="conversation.txt",
             mime="text/plain",
         )
-
         if st.button("Clear Conversation"):
-            st.session_state.messages = []
-# --- Sidebar Controls --- <end>
+            st.session_state["messages"] = []
 
-    # --- Display Chat History ---
-    for message in st.session_state.messages:
+    # --- Display chat history ---
+    for message in st.session_state.get("messages", []):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # --- Chat Input ---
+    # --- Chat input ---
     prompt = st.chat_input("Ask something...")
-
     if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        # save user message first
+        st.session_state["messages"].append({"role": "user", "content": prompt})
 
         client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-        if st.session_state.get("vectorstore") is not None:
-            retrieved_context, retrieved_docs = retrieve_context(
-                st.session_state.vectorstore,
-                prompt,
-                k=k_value,
-            )
-            system_message = build_rag_system_prompt(retrieved_context)
-        else:
-            retrieved_context = ""
-            retrieved_docs = []
-            system_message = system_prompt_no_doc#
-    #        full_reply = "Please load a URL or upload a PDF first so I can answer only from that source."
-    #        st.session_state.messages.append({"role": "assistant", "content": full_reply})
-    #        with st.chat_message("assistant"):
-    #            st.markdown(full_reply)
-    #        st.stop()
-    #        with st.chat_message("assistant"):
+        # Build system message (no vectorstore logic here)
+        system_message = system_prompt_no_doc
 
         api_messages = [
             {"role": "system", "content": system_message},
-            *st.session_state.messages,
+            *st.session_state.get("messages", []),        
         ]
-
+        
         response_chunks = []
-
         try:
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
                     response_placeholder = st.empty()
                     for chunk in client.chat.completions.create(
-                        model=st.session_state.selected_model,
+                        model=st.session_state["selected_model"],
                         messages=api_messages,
                         stream=True,
-                        temperature=st.session_state.temperature,
+                        temperature=st.session_state["temperature"],
                     ):
                         delta = chunk.choices[0].delta.content or ""
                         if delta:
                             response_chunks.append(delta)
                             response_placeholder.markdown("".join(response_chunks))
-
             full_reply = "".join(response_chunks)
         except Exception as e:
-            print(f"OpenAI API error: {e}")
             st.error("Sorry, I couldn’t generate a response right now.")
-            full_reply = "Sorry, I couldn’t generate a response right now."
+            full_reply = f"Error: {e}"
 
-        st.session_state.messages.append({"role": "assistant", "content": full_reply})
+        st.session_state["messages"].append({"role": "assistant", "content": full_reply})
 
-        if st.session_state.get("vectorstore") is not None:
-            with st.chat_message("assistant"):
-                with st.expander("🔍 View Sources"):
-                    for doc in retrieved_docs:
-                        st.write(doc.page_content)
-                        st.divider()
+        # ✅ Save assistant reply
+        validation = validate_agent_output(full_reply, context=context if 'context' in locals() else "")
 
-#run chatbot page
+        if all(v == "pass" for k, v in validation.items() if k != "issues"):
+            # Show approved reply
+            st.session_state["messages"].append({"role": "assistant", "content": full_reply})
+        else:
+            # Show validation issues instead of unsafe reply
+            issues_text = "⚠️ Validation failed:\n" + "\n".join(f"- {issue}" for issue in validation["issues"])
+            st.session_state["messages"].append({"role": "assistant", "content": issues_text})
+
+        with st.expander("🔍 Validation Results"):
+            st.json(validation)
+
+
+# -------------------------------
+# Run the chatbot page
+# -------------------------------
 chatbot_page()
