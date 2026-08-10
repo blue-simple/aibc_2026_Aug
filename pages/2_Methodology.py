@@ -7,40 +7,60 @@ from PIL import Image
 from pathlib import Path
 import graphviz
 
+# -------------------------------
+# Page Configuration
+# -------------------------------
 st.set_page_config(page_title="Application Methodology", layout="wide")
 
+# -------------------------------
+# Title
+# -------------------------------
 st.title("📊 Application Methodology and Flowcharts")
 
-
-st.header("User Interaction Flow")
+# ============================================================
+# 🧭 USER INTERACTION FLOW
+# ============================================================
+st.header("🧭 User Interaction Flow")
 
 img_dir = Path("/mount/src/aibc_2026_aug/data")
 img_path = img_dir / "method.jpg"
 img = Image.open(img_path)
 st.image(img, use_column_width=True)
 
-# --- Diagram for the RAG Application ---
-st.header("3️Master Lifecycle Diagram")
+# ============================================================
+# 🔁 MASTER LIFECYCLE DIAGRAM
+# ============================================================
+st.header("🔁 Master Lifecycle Diagram")
+
 st.markdown("""
-This diagram summarizes the entire Retrieval‑Augmented Generation (RAG) workflow — from data ingestion to final response display.
+This diagram summarizes the entire **Retrieval‑Augmented Generation (RAG)** workflow —  
+from data ingestion to final response display.  
 It visually connects all five use cases into one continuous lifecycle.
 """)
 
-img_path = img_dir / "master_lifecycle_rag.png"
-master_img = Image.open(img_path)
+master_path = img_dir / "master_lifecycle_rag.png"
+master_img = Image.open(master_path)
 st.image(master_img, caption="Master Lifecycle Diagram for RAG Application", use_column_width=True)
-with open(img_path, "rb") as f:
-    st.download_button("⬇️ Download Master Lifecycle Diagram", f, file_name="master_lifecycle_rag.png", mime="image/png")
 
-# -------------------------------
-# (1) Comprehensive Explanation
-# -------------------------------
-st.header("1️⃣ Comprehensive Explanation of Data Flows & Implementation Details")
+with open(master_path, "rb") as f:
+    st.download_button(
+        "⬇️ Download Master Lifecycle Diagram",
+        f,
+        file_name="master_lifecycle_rag.png",
+        mime="image/png"
+    )
+
+# ============================================================
+# 🧠 COMPREHENSIVE EXPLANATION
+# ============================================================
+st.header("🧠 Comprehensive Explanation of Data Flows & Implementation Details")
 
 st.markdown("""
 ### 🔹 Overview
-This application integrates document ingestion, retrieval‑augmented generation (RAG), and validation workflows to support autism‑related queries.  
-It combines **PDF and URL ingestion**, **vectorstore indexing**, **contextual prompt generation**, and **fact‑checking** against trusted sources.
+This application integrates **document ingestion**, **retrieval‑augmented generation (RAG)**,  
+and **validation workflows** to support autism‑related queries.  
+It combines **PDF and URL ingestion**, **vectorstore indexing**, **contextual prompt generation**,  
+and **fact‑checking** against trusted sources.
 
 ### 🔹 Data Flow Components
 | Component | Description |
@@ -64,44 +84,64 @@ It combines **PDF and URL ingestion**, **vectorstore indexing**, **contextual pr
 8. Response displayed.
 """)
 
-# Master flowchart
+# ============================================================
+# 🔧 MASTER FLOWCHART (Graphviz)
+# ============================================================
 master_flow = graphviz.Digraph()
 master_flow.attr(rankdir="TB", size="8,8")
-master_flow.node("A", "User Input: URL / PDF / Chat", shape="box", style="filled", fillcolor="#FFD966")
-master_flow.node("B", "Data Ingestion", shape="box", style="filled", fillcolor="#9FC5E8")
-master_flow.node("C", "Text Extraction & Chunking", shape="box", style="filled", fillcolor="#9FC5E8")
-master_flow.node("D", "Vectorstore Build/Update", shape="box", style="filled", fillcolor="#F9CB9C")
-master_flow.node("E", "Session State Updated", shape="box", style="filled", fillcolor="#F9CB9C")
-master_flow.node("F", "Chat Prompt?", shape="diamond", style="filled", fillcolor="#CFE2F3")
-master_flow.node("G", "Retrieve Context from Vectorstore", shape="box", style="filled", fillcolor="#9FC5E8")
-master_flow.node("H", "Fallback to system_prompt_no_doc", shape="box", style="filled", fillcolor="#9FC5E8")
-master_flow.node("I", "Build RAG System Prompt", shape="box", style="filled", fillcolor="#F9CB9C")
-master_flow.node("J", "OpenAI API Call", shape="box", style="filled", fillcolor="#F9CB9C")
-master_flow.node("K", "Stream Response to UI", shape="box", style="filled", fillcolor="#F9CB9C")
-master_flow.node("L", "Run Tone & Safety Checks", shape="box", style="filled", fillcolor="#9FC5E8")
-master_flow.node("M", "Validate Against Trusted Sources", shape="box", style="filled", fillcolor="#9FC5E8")
-master_flow.node("N", "Warnings if needed", shape="box", style="filled", fillcolor="#F9CB9C")
-master_flow.node("O", "Final Assistant Response with Sources", shape="box", style="filled", fillcolor="#93C47D")
 
+# Nodes
+nodes = {
+    "A": ("User Input: URL / PDF / Chat", "#FFD966"),
+    "B": ("Data Ingestion", "#9FC5E8"),
+    "C": ("Text Extraction & Chunking", "#9FC5E8"),
+    "D": ("Vectorstore Build/Update", "#F9CB9C"),
+    "E": ("Session State Updated", "#F9CB9C"),
+    "F": ("Chat Prompt?", "#CFE2F3"),
+    "G": ("Retrieve Context from Vectorstore", "#9FC5E8"),
+    "H": ("Fallback to system_prompt_no_doc", "#9FC5E8"),
+    "I": ("Build RAG System Prompt", "#F9CB9C"),
+    "J": ("OpenAI API Call", "#F9CB9C"),
+    "K": ("Stream Response to UI", "#F9CB9C"),
+    "L": ("Run Tone & Safety Checks", "#9FC5E8"),
+    "M": ("Validate Against Trusted Sources", "#9FC5E8"),
+    "N": ("Warnings if needed", "#F9CB9C"),
+    "O": ("Final Assistant Response with Sources", "#93C47D"),
+}
+
+for key, (label, color) in nodes.items():
+    master_flow.node(key, label, shape="box", style="filled", fillcolor=color)
+
+# Edges
 master_flow.edges(["AB", "BC", "CD", "DE", "EF"])
 master_flow.edge("F", "G", label="Yes")
 master_flow.edge("F", "H", label="No")
 master_flow.edges(["GI", "HI", "IJ", "JK", "KL", "KM", "LN", "MN", "NO"])
 
 st.graphviz_chart(master_flow)
-st.download_button("⬇️ Download Master Flowchart (PNG)", data=master_flow.source, file_name="master_flowchart.dot", mime="text/plain")
+st.download_button(
+    "⬇️ Download Master Flowchart (DOT)",
+    data=master_flow.source,
+    file_name="master_flowchart.dot",
+    mime="text/plain"
+)
 
-# -------------------------------
-# (2) Flowcharts for Each Use Case
-# -------------------------------
-st.header("2️⃣ Flowcharts for Each Use Case")
+# ============================================================
+# 📈 FLOWCHARTS FOR EACH USE CASE
+# ============================================================
+st.header("📈 Flowcharts for Each Use Case")
 
 def show_flowchart(title, dot_source, filename):
     st.subheader(title)
     st.graphviz_chart(dot_source)
-    st.download_button(f"⬇️ Download {title} (PNG)", data=dot_source, file_name=filename, mime="text/plain")
+    st.download_button(
+        f"⬇️ Download {title} (DOT)",
+        data=dot_source,
+        file_name=filename,
+        mime="text/plain"
+    )
 
-# Use Case 1
+# --- Use Case 1: PDF Upload & Indexing ---
 pdf_flow = """
 flowchart TD
     A[User uploads PDF] --> B[load_and_split()]
@@ -114,7 +154,7 @@ flowchart TD
 """
 show_flowchart("📄 Use Case 1: PDF Upload & Indexing", pdf_flow, "usecase1_pdf_upload.dot")
 
-# Use Case 2
+# --- Use Case 2: URL Input & Crawling ---
 url_flow = """
 flowchart TD
     A[User enters URLs] --> B[crawl_internal_pages()]
@@ -128,7 +168,7 @@ flowchart TD
 """
 show_flowchart("🌐 Use Case 2: URL Input & Crawling", url_flow, "usecase2_url_crawling.dot")
 
-# Use Case 3
+# --- Use Case 3: Chat Query with RAG ---
 chat_flow = """
 flowchart TD
     A[User enters chat prompt] --> B[Save to session_state["messages"]]
@@ -148,7 +188,7 @@ flowchart TD
 """
 show_flowchart("💬 Use Case 3: Chat Query with RAG", chat_flow, "usecase3_chat_query.dot")
 
-# Use Case 4
+# --- Use Case 4: Validation & Fact‑Checking ---
 validation_flow = """
 flowchart TD
     A[Assistant generates response] --> B[check_tone_and_safety()]
@@ -161,7 +201,7 @@ flowchart TD
 """
 show_flowchart("✅ Use Case 4: Validation & Fact‑Checking", validation_flow, "usecase4_validation.dot")
 
-# Use Case 5
+# --- Use Case 5: Sidebar Controls ---
 sidebar_flow = """
 flowchart TD
     A[User interacts with sidebar] --> B[Persistence toggle]
@@ -176,5 +216,3 @@ flowchart TD
     F --> I[Update conversation state]
 """
 show_flowchart("⚙️ Use Case 5: Sidebar Controls", sidebar_flow, "usecase5_sidebar.dot")
-
-st.success("✅ Comprehensive explanation, all flowcharts, and download options are ready. Run with `streamlit run methodology_with_downloads.py` to view interactively.")
