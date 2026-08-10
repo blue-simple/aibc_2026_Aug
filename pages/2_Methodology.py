@@ -23,7 +23,7 @@ st.title("📊 Application Methodology and Flowcharts")
 st.header("🧭 User Interaction Flow")
 
 img_dir = Path("/mount/src/aibc_2026_aug/data")
-img_path = img_dir / "method.jpg"
+img_path = img_dir / "user_interaction.png"
 img = Image.open(img_path)
 st.image(img, caption="User Interaction Flow", width=600)
 
