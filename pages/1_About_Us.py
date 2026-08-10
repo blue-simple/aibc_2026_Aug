@@ -1,10 +1,10 @@
-# A detailed page outlining the project scope, objectives, data sources, and features.
-
+# 1_About_Us.py
 # A detailed page outlining the project scope, objectives, data sources, and features.
 # Team Project Information - Autism Support Chatbot
 
 import streamlit as st
 
+# Project information dictionary
 project = {
     "name": "Autism Support Chatbot",
     "scope": [
@@ -29,23 +29,22 @@ project = {
     ]
 }
 
-# Display Project Info
-print("=" * 50)
-print(f"Project: {project['name']}")
-print("=" * 50)
+# Streamlit page content
+st.title("ℹ️ About Us")
+st.subheader(f"Project: {project['name']}")
 
-print("\n--- Project Scope ---")
+st.markdown("### 📌 Project Scope")
 for i, scope in enumerate(project["scope"], 1):
-    print(f"{i}. {scope}")
+    st.write(f"{i}. {scope}")
 
-print("\n--- Objectives ---")
+st.markdown("### 🎯 Objectives")
 for i, obj in enumerate(project["objectives"], 1):
-    print(f"{i}. {obj}")
+    st.write(f"{i}. {obj}")
 
-print("\n--- Data Sources ---")
+st.markdown("### 📚 Data Sources")
 for source, url in project["data_sources"].items():
-    print(f"- {source}: {url}")
+    st.write(f"- [{source}]({url})")
 
-print("\n--- Features ---")
+st.markdown("### ⚙️ Features")
 for i, feature in enumerate(project["features"], 1):
-    print(f"{i}. {feature}")
+    st.write(f"{i}. {feature}")
