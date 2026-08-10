@@ -20,8 +20,7 @@ project = {
     "data_sources": {
         "SG Enable": "https://www.enablingguide.sg/disability-info/autism",
         "Autism Research Institute": "https://autism.org/",
-        "Autism Collaborative": "https://www.asdcollaborative.sg/",
-        "MSF Families for Life": "https://familiesforlife.sg/"
+        "National Institute of Mental Health": "https://www.nimh.nih.gov/"
     },
     "features": [
         "24/7 AI chatbot for mental support through online conversations",
@@ -42,7 +41,7 @@ for i, obj in enumerate(project["objectives"], 1):
     st.write(f"{i}. {obj}")
 
 st.markdown("### 📚 Data Sources")
-for source, url in project["data_sources"].items():
+for source, url in project["fact checked data_sources"].items():
     st.write(f"- [{source}]({url})")
 
 st.markdown("### ⚙️ Features")
