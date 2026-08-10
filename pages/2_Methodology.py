@@ -7,11 +7,6 @@ from PIL import Image
 from pathlib import Path
 import graphviz
 
-
-
-import streamlit as st
-
-
 st.set_page_config(page_title="Application Methodology", layout="wide")
 
 st.title("📊 Application Methodology and Flowcharts")
@@ -19,8 +14,8 @@ st.title("📊 Application Methodology and Flowcharts")
 
 st.header("User Interaction Flow")
 
-img_path = Path("/mount/src/aibc_2026_aug/data/method.jpg")
-img = Image.open(img_path)
+img_path = Path("/mount/src/aibc_2026_aug/data/")
+img = Image.open(img_path+"method.jpg")
 st.image(img, use_column_width=True)
 
 # --- Diagram for the RAG Application ---
@@ -30,9 +25,9 @@ This diagram summarizes the entire Retrieval‑Augmented Generation (RAG) workfl
 It visually connects all five use cases into one continuous lifecycle.
 """)
 
-master_img = Image.open("master_lifecycle_rag.png")  # Replace with your downloaded file
+master_img = Image.open(img_path+"master_lifecycle_rag.png")
 st.image(master_img, caption="Master Lifecycle Diagram for RAG Application", use_column_width=True)
-with open("/mount/src/aibc_2026_aug/data/master_lifecycle_rag.png", "rb") as f:
+with open(img_path+"master_lifecycle_rag.png", "rb") as f:
     st.download_button("⬇️ Download Master Lifecycle Diagram", f, file_name="master_lifecycle_rag.png", mime="image/png")
 
 # -------------------------------
