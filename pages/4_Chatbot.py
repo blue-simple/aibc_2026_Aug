@@ -537,21 +537,42 @@ def chatbot_page():
         st.session_state["messages"].append({"role": "assistant", "content": full_reply})
 
         # Display retrieved sources
+#       if st.session_state.get("vectorstore") is not None:
+#            with st.expander("🔍 View Sources from user provided information"):
+#                #for doc in retrived_docs:
+#                #    st.write(doc.page_content)
+#                #    st.divider()
+#                for doc in retrieved_docs:
+#                    # Show the source URL if available
+#                    source_url = doc.metadata.get("source")
+#                    if source_url:
+#                        st.markdown(f"[View Source]({source_url})")
+#       
+#                    # Show the chunk text
+#                    st.write(doc.page_content)
+#
+#                    st.divider()
+
+        # --- Display retrieved sources ---
         if st.session_state.get("vectorstore") is not None:
-            with st.expander("🔍 View Sources from user provided information"):
-                #for doc in retrieved_docs:
-                #    st.write(doc.page_content)
-                #    st.divider()
-                for doc in retrieved_docs:
-                    # Show the source URL if available
-                    source_url = doc.metadata.get("source")
-                    if source_url:
-                        st.markdown(f"[View Source]({source_url})")
+            # Count how many sources were retrieved
+            source_count = len(retrieved_docs) if retrieved_docs else 0
+            with st.expander(f"🔍 View Sources from user provided information ({source_count})"):
+                if retrieved_docs:
+                    for doc in retrieved_docs:
+                        # Show the source URL inline at the top with a preview snippet
+                        source_url = doc.metadata.get("source")
+                        if source_url:
+                            preview = doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
+                            st.markdown(f"**Source:** [{source_url}]({source_url})")
+                            st.caption(preview)
 
-                    # Show the chunk text
-                    st.write(doc.page_content)
+                        # Full chunk text below
+                        st.write(doc.page_content)
+                        st.divider()
+                else:
+                    st.info("No relevant sources were retrieved for this query.")
 
-                    st.divider()
 
         # Tone/safety checks
         keyword_checks = check_tone_and_safety(full_reply)
