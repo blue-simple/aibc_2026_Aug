@@ -574,9 +574,29 @@ def chatbot_page():
 
         with st.expander("🔍 Validation Results"):
             st.write("**Source fact-check** (Enabling Guide SG, NIMH, Autism Association Singapore)")
-            st.json(source_check)
+
+            verdict_labels = {
+                "supported": "✅ Supported by trusted sources",
+                "partially_supported": "🟡 Partially supported by trusted sources",
+                "unsupported": "⚪ Not covered by trusted sources",
+                "contradicted": "🔴 Contradicted by trusted sources",
+                "no_relevant_source": "⚪ No relevant trusted source found",
+                "sources_unavailable": "⚪ Trusted sources unavailable",
+                "check_failed": "⚠️ Fact-check could not be completed",
+            }
+            st.markdown(verdict_labels.get(source_check["verdict"], source_check["verdict"]))
+            if source_check.get("explanation"):
+                st.caption(source_check["explanation"])
+            cited_sources = sorted({c["source"] for c in source_check.get("citations", [])})
+            if cited_sources:
+                st.caption("Sources checked: " + ", ".join(cited_sources))
+
             st.write("**Tone / safety checks**")
-            st.json(keyword_checks)
+            if keyword_checks["issues"]:
+                for issue in keyword_checks["issues"]:
+                    st.caption(f"⚠️ {issue}")
+            else:
+                st.caption("✅ No tone or safety issues detected.")
 
 
 # -------------------------------
