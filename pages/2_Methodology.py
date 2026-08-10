@@ -10,4 +10,4 @@ st.title("Methodology")
 
 img_path = Path("/mount/src/aibc_2026_aug/data/method.jpg")
 img = Image.open(img_path)
-st.image(img, use_container_width=True)
+st.image(img, use_column_width=True)
