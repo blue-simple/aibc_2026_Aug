@@ -14,8 +14,9 @@ st.title("📊 Application Methodology and Flowcharts")
 
 st.header("User Interaction Flow")
 
-img_path = Path("/mount/src/aibc_2026_aug/data/")
-img = Image.open(img_path+"method.jpg")
+img_dir = Path("/mount/src/aibc_2026_aug/data")
+img_path = img_dir / "method.jpg"
+img = Image.open(img_path)
 st.image(img, use_column_width=True)
 
 # --- Diagram for the RAG Application ---
@@ -25,9 +26,10 @@ This diagram summarizes the entire Retrieval‑Augmented Generation (RAG) workfl
 It visually connects all five use cases into one continuous lifecycle.
 """)
 
-master_img = Image.open(img_path+"master_lifecycle_rag.png")
+img_path = img_dir / master_lifecycle_rag.pn
+master_img = Image.open(img_path)
 st.image(master_img, caption="Master Lifecycle Diagram for RAG Application", use_column_width=True)
-with open(img_path+"master_lifecycle_rag.png", "rb") as f:
+with open(img_path, "rb") as f:
     st.download_button("⬇️ Download Master Lifecycle Diagram", f, file_name="master_lifecycle_rag.png", mime="image/png")
 
 # -------------------------------
