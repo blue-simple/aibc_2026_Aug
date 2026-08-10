@@ -25,7 +25,7 @@ st.header("🧭 User Interaction Flow")
 img_dir = Path("/mount/src/aibc_2026_aug/data")
 img_path = img_dir / "method.jpg"
 img = Image.open(img_path)
-st.image(img, use_column_width=True)
+st.image(img, caption="User Interaction Flow", width=600)
 
 # ============================================================
 # 🔁 MASTER LIFECYCLE DIAGRAM
@@ -40,7 +40,7 @@ It visually connects all five use cases into one continuous lifecycle.
 
 master_path = img_dir / "master_lifecycle_rag.png"
 master_img = Image.open(master_path)
-st.image(master_img, caption="Master Lifecycle Diagram for RAG Application", use_column_width=True)
+st.image(master_img, caption="Master Lifecycle Diagram", width=600)
 
 with open(master_path, "rb") as f:
     st.download_button(
