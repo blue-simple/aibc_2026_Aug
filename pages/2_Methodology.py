@@ -42,7 +42,7 @@ img_path = img_dir / "master_lifecycle_rag.png"
 img = Image.open(img_path)
 st.image(img, caption="Master Lifecycle Diagram", width=600)
 
-with open(img, "rb") as f:
+with open(img_path, "rb") as f:
     st.download_button(
         "⬇️ Download Master Lifecycle Diagram",
         f,
