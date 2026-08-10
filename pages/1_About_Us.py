@@ -40,8 +40,8 @@ st.markdown("### 🎯 Objectives")
 for i, obj in enumerate(project["objectives"], 1):
     st.write(f"{i}. {obj}")
 
-st.markdown("### 📚 Data Sources")
-for source, url in project["fact checked data_sources"].items():
+st.markdown("### 📚 Data Sources for Fact Check")
+for source, url in project["data_sources"].items():
     st.write(f"- [{source}]({url})")
 
 st.markdown("### ⚙️ Features")
