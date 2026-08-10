@@ -1,9 +1,0 @@
-﻿Stage,Function(s),Description
-1️⃣ Document Ingestion,"load_and_split()
-crawl_internal_pages()
-build_url_chunks()","Loads PDFs or crawls websites, extracts text, and splits into manageable chunks."
-2️⃣ Embedding,build_vectorstore(),"Converts text chunks into embeddings using OpenAIEmbeddings(model=""text-embedding-3-small"")."
-3️⃣ Vector Store,extend_resource_store(),Stores embeddings in InMemoryVectorStore and maintains them in st.session_state.
-4️⃣ Context Retrieval,retrieve_context(),Retrieves relevant document chunks based on user queries (vectorstore.as_retriever).
-5️⃣ Answer Generation,"chatbot_page()
-build_rag_system_prompt()",Sends the query and retrieved context to the OpenAI model (client.chat.completions.create) to generate grounded answers.
