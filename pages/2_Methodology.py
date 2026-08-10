@@ -26,7 +26,7 @@ This diagram summarizes the entire Retrieval‑Augmented Generation (RAG) workfl
 It visually connects all five use cases into one continuous lifecycle.
 """)
 
-img_path = img_dir / master_lifecycle_rag.pn
+img_path = img_dir / master_lifecycle_rag.png
 master_img = Image.open(img_path)
 st.image(master_img, caption="Master Lifecycle Diagram for RAG Application", use_column_width=True)
 with open(img_path, "rb") as f:
