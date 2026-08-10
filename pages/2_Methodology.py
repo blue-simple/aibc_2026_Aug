@@ -2,22 +2,38 @@
 # A flowchart illustrating the process flow for each use case in the application. Each use case should have its own flowchart.
 # Refer to the sample here for examples of flowcharts and methodology (Slides 13, 14, and 15)
 
-#import streamlit as st
-#from PIL import Image
-#from pathlib import Path
+import streamlit as st
+from PIL import Image
+from pathlib import Path
+import graphviz
 
-#st.title("Methodology")
 
-#img_path = Path("/mount/src/aibc_2026_aug/data/method.jpg")
-#img = Image.open(img_path)
-#st.image(img, use_column_width=True)
 
 import streamlit as st
-import graphviz
+
 
 st.set_page_config(page_title="Application Methodology", layout="wide")
 
 st.title("📊 Application Methodology and Flowcharts")
+
+
+st.header("User Interaction Flow")
+
+img_path = Path("/mount/src/aibc_2026_aug/data/method.jpg")
+img = Image.open(img_path)
+st.image(img, use_column_width=True)
+
+# --- Diagram for the RAG Application ---
+st.header("3️Master Lifecycle Diagram")
+st.markdown("""
+This diagram summarizes the entire Retrieval‑Augmented Generation (RAG) workflow — from data ingestion to final response display.
+It visually connects all five use cases into one continuous lifecycle.
+""")
+
+master_img = Image.open("master_lifecycle_rag.png")  # Replace with your downloaded file
+st.image(master_img, caption="Master Lifecycle Diagram for RAG Application", use_column_width=True)
+with open("/mount/src/aibc_2026_aug/data/master_lifecycle_rag.png", "rb") as f:
+    st.download_button("⬇️ Download Master Lifecycle Diagram", f, file_name="master_lifecycle_rag.png", mime="image/png")
 
 # -------------------------------
 # (1) Comprehensive Explanation
