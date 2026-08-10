@@ -1,4 +1,5 @@
 from multiprocessing import context
+import json
 import tempfile
 from collections import deque
 from pathlib import Path
@@ -24,7 +25,7 @@ def is_valid_http_url(candidate_url):
 
 
 def crawl_internal_pages(start_urls, max_pages):
-    """Crawl internal links from multiple websites and return plain-text page content."""
+    """Crawl internal links from multiple websites and return {"url", "text"} page records."""
     if isinstance(start_urls, str):
         start_urls = [start_urls]
 
@@ -58,7 +59,7 @@ def crawl_internal_pages(start_urls, max_pages):
 
             page_text = soup.get_text(separator="\n", strip=True)
             if page_text.strip():
-                page_texts.append(page_text)
+                page_texts.append({"url": current_url, "text": page_text})
 
             for anchor in soup.find_all("a", href=True):
                 href = anchor["href"]
@@ -87,6 +88,27 @@ def build_vectorstore(_chunks):
         api_key=st.secrets["OPENAI_API_KEY"],
     )
     return InMemoryVectorStore.from_documents(documents=_chunks, embedding=embeddings)
+
+
+# Reliable reference sites used to fact-check the assistant's own answers.
+TRUSTED_SOURCES = [
+    "https://www.enablingguide.sg/",
+    "https://www.nimh.nih.gov/",
+    "https://www.autism.org.sg/",
+]
+
+
+@st.cache_resource(show_spinner="Indexing trusted reference sources (first run only)...")
+def build_trusted_vectorstore():
+    """Crawl the trusted reference sites once per app process and index them for fact-checking."""
+    chunks = build_url_chunks(TRUSTED_SOURCES, max_pages=15)
+    if not chunks:
+        return None
+    embeddings = OpenAIEmbeddings(
+        model="text-embedding-3-small",
+        api_key=st.secrets["OPENAI_API_KEY"],
+    )
+    return InMemoryVectorStore.from_documents(documents=chunks, embedding=embeddings)
 
 
 def extend_resource_store(chunks):
@@ -186,7 +208,9 @@ def build_url_chunks(start_urls, chunk_size=800, chunk_overlap=100, max_pages=20
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
     )
-    return splitter.create_documents(scraped_pages)
+    texts = [page["text"] for page in scraped_pages]
+    metadatas = [{"source": page["url"]} for page in scraped_pages]
+    return splitter.create_documents(texts, metadatas=metadatas)
 
 # 2nd agent to validate against the 1st agent
 def validate_agent_output(output: str, context: str = "") -> dict:
@@ -224,6 +248,87 @@ def validate_agent_output(output: str, context: str = "") -> dict:
 
     return results
 
+
+def build_fact_check_prompt(reply, trusted_context):
+    """Build a prompt asking a grounding-check model to compare a reply against trusted excerpts."""
+    return (
+        "You are a fact-checking assistant reviewing an AI-generated answer about autism spectrum "
+        "disorder (ASD) support in Singapore. Compare the answer's factual claims against the excerpts "
+        "below, drawn from trusted reference sources (Enabling Guide SG, NIMH, Autism Association Singapore).\n\n"
+        "Respond ONLY with a JSON object with these keys:\n"
+        '  "verdict": one of "supported", "partially_supported", "unsupported", "contradicted"\n'
+        '  "explanation": 1-2 sentences justifying the verdict\n'
+        '  "unsupported_claims": a list of specific claims from the answer not backed by the excerpts '
+        "(empty list if none)\n\n"
+        f"Trusted source excerpts:\n{trusted_context}\n\n"
+        f"AI-generated answer to check:\n{reply}"
+    )
+
+
+def validate_against_trusted_sources(client, model, reply, trusted_vectorstore, k=4):
+    """Check an assistant reply for grounding against the trusted reference vector store."""
+    if trusted_vectorstore is None:
+        return {
+            "verdict": "unavailable",
+            "explanation": "Trusted reference index is not available.",
+            "unsupported_claims": [],
+            "sources": [],
+        }
+
+    trusted_context, docs = retrieve_context(trusted_vectorstore, reply, k=k)
+
+    try:
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": build_fact_check_prompt(reply, trusted_context)}],
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        result = json.loads(completion.choices[0].message.content)
+    except Exception as e:
+        result = {
+            "verdict": "error",
+            "explanation": f"Trusted-source check failed: {e}",
+            "unsupported_claims": [],
+        }
+
+    result["sources"] = sorted({
+        doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
+    })
+    return result
+
+
+def render_validation_badge(validation):
+    """Render a compact verdict badge plus an expander with full validation detail."""
+    trust = validation.get("trusted_source_check", {}) if validation else {}
+    quality = validation.get("quality_checks", {}) if validation else {}
+
+    badge_labels = {
+        "supported": "✅ Verified against trusted sources",
+        "partially_supported": "⚠️ Partially supported by trusted sources",
+        "unsupported": "❓ Could not verify against trusted sources",
+        "contradicted": "🚫 May conflict with trusted sources",
+        "unavailable": "ℹ️ Trusted-source check unavailable",
+        "error": "ℹ️ Trusted-source check unavailable",
+    }
+    st.caption(badge_labels.get(trust.get("verdict"), badge_labels["unavailable"]))
+
+    quality_issues = quality.get("issues", [])
+    if quality_issues:
+        st.caption("⚠️ " + "; ".join(quality_issues))
+
+    with st.expander("🔍 Validation details"):
+        if trust.get("explanation"):
+            st.write(trust["explanation"])
+        if trust.get("unsupported_claims"):
+            st.write("**Unsupported claims:**")
+            for claim in trust["unsupported_claims"]:
+                st.write(f"- {claim}")
+        if trust.get("sources"):
+            st.write("**Matched trusted sources:**")
+            for source in trust["sources"]:
+                st.write(f"- {source}")
+        st.json(validation)
 
 
 # -------------------------------
@@ -367,6 +472,8 @@ def chatbot_page():
     for message in st.session_state.get("messages", []):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            if message.get("validation"):
+                render_validation_badge(message["validation"])
 
     # --- Chat input ---
     prompt = st.chat_input("Ask something...")
@@ -380,10 +487,11 @@ def chatbot_page():
 
         api_messages = [
             {"role": "system", "content": system_message},
-            *st.session_state.get("messages", []),        
+            *[{"role": m["role"], "content": m["content"]} for m in st.session_state.get("messages", [])],
         ]
-        
+
         response_chunks = []
+        combined_validation = None
         try:
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
@@ -398,26 +506,26 @@ def chatbot_page():
                         if delta:
                             response_chunks.append(delta)
                             response_placeholder.markdown("".join(response_chunks))
-            full_reply = "".join(response_chunks)
+                full_reply = "".join(response_chunks)
+
+                with st.spinner("Checking against trusted sources..."):
+                    quality_check = validate_agent_output(
+                        full_reply, context=context if 'context' in locals() else ""
+                    )
+                    trusted_vectorstore = build_trusted_vectorstore()
+                    trust_check = validate_against_trusted_sources(
+                        client, st.session_state["selected_model"], full_reply, trusted_vectorstore, k=k_value
+                    )
+
+                combined_validation = {"quality_checks": quality_check, "trusted_source_check": trust_check}
+                render_validation_badge(combined_validation)
         except Exception as e:
             st.error("Sorry, I couldn’t generate a response right now.")
             full_reply = f"Error: {e}"
 
-        st.session_state["messages"].append({"role": "assistant", "content": full_reply})
-
-        # ✅ Save assistant reply
-        validation = validate_agent_output(full_reply, context=context if 'context' in locals() else "")
-
-        if all(v == "pass" for k, v in validation.items() if k != "issues"):
-            # Show approved reply
-            st.session_state["messages"].append({"role": "assistant", "content": full_reply})
-        else:
-            # Show validation issues instead of unsafe reply
-            issues_text = "⚠️ Validation failed:\n" + "\n".join(f"- {issue}" for issue in validation["issues"])
-            st.session_state["messages"].append({"role": "assistant", "content": issues_text})
-
-        with st.expander("🔍 Validation Results"):
-            st.json(validation)
+        st.session_state["messages"].append(
+            {"role": "assistant", "content": full_reply, "validation": combined_validation}
+        )
 
 
 # -------------------------------
