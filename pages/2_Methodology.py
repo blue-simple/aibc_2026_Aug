@@ -13,10 +13,11 @@
 #st.image(img, use_column_width=True)
 
 import streamlit as st
+import graphviz
 
-st.set_page_config(page_title="Methodology", layout="wide")
+st.set_page_config(page_title="Application Methodology", layout="wide")
 
-st.title("📊 Application Methodology")
+st.title("📊 Application Methodology and Flowcharts")
 
 # -------------------------------
 # (1) Comprehensive Explanation
@@ -24,57 +25,71 @@ st.title("📊 Application Methodology")
 st.header("1️⃣ Comprehensive Explanation of Data Flows & Implementation Details")
 
 st.markdown("""
-### 🔹 Core Components
-- **Document ingestion**
-  - PDFs → `load_and_split()` extracts text → split into chunks → stored in vectorstore.
-  - URLs → `crawl_internal_pages()` scrapes → `build_url_chunks()` chunks text → stored in vectorstore.
+### 🔹 Overview
+This application integrates document ingestion, retrieval‑augmented generation (RAG), and validation workflows to support autism‑related queries.  
+It combines **PDF and URL ingestion**, **vectorstore indexing**, **contextual prompt generation**, and **fact‑checking** against trusted sources.
 
-- **Vectorstore (Chroma)**
-  - Built via `build_vectorstore()` with persistence toggle.
-  - New chunks added via `extend_resource_store()`.
-  - Retrieval via `retrieve_context()`.
+### 🔹 Data Flow Components
+| Component | Description |
+|------------|-------------|
+| **Document ingestion** | PDFs are uploaded and processed by `load_and_split()`. URLs are crawled using `crawl_internal_pages()` and chunked via `build_url_chunks()`. |
+| **Vectorstore (Chroma)** | Built using `build_vectorstore()` with optional persistence. Documents are added through `extend_resource_store()`. |
+| **Context retrieval** | `retrieve_context()` fetches relevant chunks for a user query. |
+| **Prompt construction** | `build_rag_system_prompt()` integrates retrieved context into the system prompt. |
+| **Chat interaction** | User messages are stored in `st.session_state["messages"]`. The OpenAI API streams responses. |
+| **Validation & safety** | `check_tone_and_safety()` flags tone issues; `validate_against_trusted_sources()` fact‑checks answers. |
+| **Sidebar controls** | Allow toggling persistence, uploading documents, adjusting model settings, and managing conversations. |
 
-- **System prompt construction**
-  - If vectorstore exists → `build_rag_system_prompt(context)`.
-  - Else → fallback to `system_prompt_no_doc`.
-
-- **Chat interaction**
-  - User input saved in `st.session_state["messages"]`.
-  - Context retrieved if available.
-  - OpenAI API called with system + user messages.
-  - Response streamed back to UI.
-
-- **Validation & safety**
-  - `check_tone_and_safety()` keyword checks.
-  - `validate_against_trusted_sources()` fact-checks against Enabling Guide SG, NIMH, Autism Association SG.
-
-- **Sidebar controls**
-  - Mode indicator (Persistent vs Session-only).
-  - Fact-check sources status.
-  - Document input (URLs, PDFs).
-  - Settings (model, temperature, retrieval k).
-  - Conversation tools (download, clear chat).
-""")
-
-st.markdown("""
 ### 🔹 Data Flow Summary
-1. User provides input (URL, PDF, or chat prompt).
-2. Data ingestion → text extracted, chunked, stored in vectorstore.
-3. Session state updated.
-4. Query execution → context retrieved.
-5. System prompt built.
-6. OpenAI API called.
-7. Validation checks.
+1. User provides input (URL, PDF, or chat prompt).  
+2. Data ingestion → text extracted, chunked, stored in vectorstore.  
+3. Session state updated.  
+4. Query execution → context retrieved.  
+5. System prompt built.  
+6. OpenAI API called.  
+7. Validation checks.  
 8. Response displayed.
 """)
 
+# Master flowchart
+master_flow = graphviz.Digraph()
+master_flow.attr(rankdir="TB", size="8,8")
+master_flow.node("A", "User Input: URL / PDF / Chat", shape="box", style="filled", fillcolor="#FFD966")
+master_flow.node("B", "Data Ingestion", shape="box", style="filled", fillcolor="#9FC5E8")
+master_flow.node("C", "Text Extraction & Chunking", shape="box", style="filled", fillcolor="#9FC5E8")
+master_flow.node("D", "Vectorstore Build/Update", shape="box", style="filled", fillcolor="#F9CB9C")
+master_flow.node("E", "Session State Updated", shape="box", style="filled", fillcolor="#F9CB9C")
+master_flow.node("F", "Chat Prompt?", shape="diamond", style="filled", fillcolor="#CFE2F3")
+master_flow.node("G", "Retrieve Context from Vectorstore", shape="box", style="filled", fillcolor="#9FC5E8")
+master_flow.node("H", "Fallback to system_prompt_no_doc", shape="box", style="filled", fillcolor="#9FC5E8")
+master_flow.node("I", "Build RAG System Prompt", shape="box", style="filled", fillcolor="#F9CB9C")
+master_flow.node("J", "OpenAI API Call", shape="box", style="filled", fillcolor="#F9CB9C")
+master_flow.node("K", "Stream Response to UI", shape="box", style="filled", fillcolor="#F9CB9C")
+master_flow.node("L", "Run Tone & Safety Checks", shape="box", style="filled", fillcolor="#9FC5E8")
+master_flow.node("M", "Validate Against Trusted Sources", shape="box", style="filled", fillcolor="#9FC5E8")
+master_flow.node("N", "Warnings if needed", shape="box", style="filled", fillcolor="#F9CB9C")
+master_flow.node("O", "Final Assistant Response with Sources", shape="box", style="filled", fillcolor="#93C47D")
+
+master_flow.edges(["AB", "BC", "CD", "DE", "EF"])
+master_flow.edge("F", "G", label="Yes")
+master_flow.edge("F", "H", label="No")
+master_flow.edges(["GI", "HI", "IJ", "JK", "KL", "KM", "LN", "MN", "NO"])
+
+st.graphviz_chart(master_flow)
+st.download_button("⬇️ Download Master Flowchart (PNG)", data=master_flow.source, file_name="master_flowchart.dot", mime="text/plain")
+
 # -------------------------------
-# (2) Flowcharts
+# (2) Flowcharts for Each Use Case
 # -------------------------------
 st.header("2️⃣ Flowcharts for Each Use Case")
 
-st.subheader("📄 Use Case 1: PDF Upload & Indexing")
-st.graphviz_chart("""
+def show_flowchart(title, dot_source, filename):
+    st.subheader(title)
+    st.graphviz_chart(dot_source)
+    st.download_button(f"⬇️ Download {title} (PNG)", data=dot_source, file_name=filename, mime="text/plain")
+
+# Use Case 1
+pdf_flow = """
 flowchart TD
     A[User uploads PDF] --> B[load_and_split()]
     B --> C[Extract text with PdfReader]
@@ -83,10 +98,11 @@ flowchart TD
     E --> F[Add chunks to vectorstore]
     F --> G[Session state updated]
     G --> H[Ready for RAG queries]
-""")
+"""
+show_flowchart("📄 Use Case 1: PDF Upload & Indexing", pdf_flow, "usecase1_pdf_upload.dot")
 
-st.subheader("🌐 Use Case 2: URL Input & Crawling")
-st.graphviz_chart("""
+# Use Case 2
+url_flow = """
 flowchart TD
     A[User enters URLs] --> B[crawl_internal_pages()]
     B --> C[Scrape text & links]
@@ -96,10 +112,11 @@ flowchart TD
     F --> G[Add chunks to vectorstore]
     G --> H[Session state updated]
     H --> I[Ready for RAG queries]
-""")
+"""
+show_flowchart("🌐 Use Case 2: URL Input & Crawling", url_flow, "usecase2_url_crawling.dot")
 
-st.subheader("💬 Use Case 3: Chat Query with RAG")
-st.graphviz_chart("""
+# Use Case 3
+chat_flow = """
 flowchart TD
     A[User enters chat prompt] --> B[Save to session_state["messages"]]
     B --> C{Vectorstore exists?}
@@ -115,10 +132,11 @@ flowchart TD
     J --> L[Display warnings if needed]
     K --> L
     L --> M[Assistant response shown with sources]
-""")
+"""
+show_flowchart("💬 Use Case 3: Chat Query with RAG", chat_flow, "usecase3_chat_query.dot")
 
-st.subheader("✅ Use Case 4: Validation & Fact-Checking")
-st.graphviz_chart("""
+# Use Case 4
+validation_flow = """
 flowchart TD
     A[Assistant generates response] --> B[check_tone_and_safety()]
     A --> C[validate_against_trusted_sources()]
@@ -127,10 +145,11 @@ flowchart TD
     E --> F[Return verdict: supported/unsupported/contradicted]
     D --> G[Display warnings/errors]
     F --> G[Show validation results in UI]
-""")
+"""
+show_flowchart("✅ Use Case 4: Validation & Fact‑Checking", validation_flow, "usecase4_validation.dot")
 
-st.subheader("⚙️ Use Case 5: Sidebar Controls")
-st.graphviz_chart("""
+# Use Case 5
+sidebar_flow = """
 flowchart TD
     A[User interacts with sidebar] --> B[Persistence toggle]
     A --> C[Enter URLs]
@@ -142,6 +161,7 @@ flowchart TD
     D --> G
     E --> H[Update session_state]
     F --> I[Update conversation state]
-""")
+"""
+show_flowchart("⚙️ Use Case 5: Sidebar Controls", sidebar_flow, "usecase5_sidebar.dot")
 
-st.success("✅ Documentation and flowcharts are ready. Run with `streamlit run methodology.py` to view interactively.")
+st.success("✅ Comprehensive explanation, all flowcharts, and download options are ready. Run with `streamlit run methodology_with_downloads.py` to view interactively.")
