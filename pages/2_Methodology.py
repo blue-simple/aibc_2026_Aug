@@ -38,9 +38,9 @@ from data ingestion to final response display.
 It visually connects all five use cases into one continuous lifecycle.
 """)
 
-master_path = img_dir / "master_lifecycle_rag.png"
-master_img = Image.open(master_path)
-st.image(master_img, caption="Master Lifecycle Diagram", width=600)
+img_path = img_dir / "master_lifecycle_rag.png"
+img = Image.open(img_path)
+st.image(img, caption="Master Lifecycle Diagram", width=600)
 
 with open(master_path, "rb") as f:
     st.download_button(
@@ -152,6 +152,9 @@ flowchart TD
     F --> G[Session state updated]
     G --> H[Ready for RAG queries]
 """
+img_path = img_dir / "usecase_1.png"
+img = Image.open(img_path)
+st.image(img, caption="Use Case 1: PDF Upload & Indexing", width=600)
 show_flowchart("📄 Use Case 1: PDF Upload & Indexing", pdf_flow, "usecase1_pdf_upload.dot")
 
 # --- Use Case 2: URL Input & Crawling ---
