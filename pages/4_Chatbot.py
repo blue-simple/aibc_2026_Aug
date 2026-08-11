@@ -21,6 +21,7 @@ import os
 # Disable Chroma telemetry
 os.environ["CHROMA_TELEMETRY_DISABLED"] = "1"
 
+
 # -------------------------------
 # Utility Functions
 # -------------------------------
@@ -226,12 +227,21 @@ def build_url_chunks(start_urls, chunk_size=800, chunk_overlap=100, max_pages=20
 # -------------------------------
 # Output validation against trusted sources
 # -------------------------------
-TRUSTED_SOURCE_URLS = [
-    "https://www.enablingguide.sg/",
-    "https://www.nimh.nih.gov/",
-    "https://www.autism.org.sg/",
-]
+#TRUSTED_SOURCE_URLS = [
+#    "https://www.enablingguide.sg/",
+#    "https://www.nimh.nih.gov/",
+#    "https://www.autism.org.sg/",
+#]
 
+def load_trusted_sources(file_path="data/trusted_sources.txt"):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            urls = [line.strip() for line in f if line.strip()]
+        return urls
+    except FileNotFoundError:
+        return []
+
+TRUSTED_SOURCE_URLS = load_trusted_sources()
 
 @st.cache_resource(show_spinner="Indexing trusted reference sources for fact-checking...")
 def build_trusted_vectorstore():
@@ -323,6 +333,34 @@ def validate_against_trusted_sources(client, model, question, answer, vectorstor
     ]
 
     return {"verdict": verdict, "explanation": explanation, "citations": citations}
+
+#def validate_against_trusted_sources(client, model, question, answer, vectorstore, k=6):
+#    retriever = vectorstore.as_retriever(search_kwargs={"k": k})
+#    docs = retriever.invoke(f"{question}\n\n{answer}")
+#
+#    if not docs:
+#        return {"verdict": "no_relevant_source", "claims": [], "citations": []}
+#
+#    excerpt_block = "\n\n---\n\n".join(
+#        f"Source: {doc.metadata.get('source', 'unknown')}\n{doc.page_content}" for doc in docs
+#    )
+#
+#    judge_prompt = f"""
+#    Extract factual claims from the ASSISTANT ANSWER.
+#    For each claim, judge if it is supported, unsupported, or contradicted by the SOURCE EXCERPTS.
+#    Return JSON with claims, verdicts, overall_verdict, explanation, and confidence score.
+#    QUESTION: {question}
+#    ASSISTANT ANSWER: {answer}
+#    SOURCE EXCERPTS: {excerpt_block}
+#    """
+#
+#    response = client.chat.completions.create(
+#        model=model,
+#        messages=[{"role": "user", "content": judge_prompt}],
+#        temperature=0,
+#    )
+#
+#    return json.loads(response.choices[0].message.content.strip())
 
 
 # -------------------------------

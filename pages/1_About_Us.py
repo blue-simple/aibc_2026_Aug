@@ -3,6 +3,17 @@
 # Team Project Information - Autism Support Chatbot
 
 import streamlit as st
+from pathlib import Path
+
+def load_trusted_sources(file_path="data/trusted_sources.txt"):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            urls = [line.strip() for line in f if line.strip()]
+        return urls
+    except FileNotFoundError:
+        return []
+
+TRUSTED_SOURCE_URLS = load_trusted_sources()
 
 # Project information dictionary
 project = {
@@ -18,9 +29,9 @@ project = {
         "Guide non-autistic people on how to care for people with autism"
     ],
     "data_sources": {
-        "SG Enable": "https://www.enablingguide.sg/disability-info/autism",
-        "Autism Research Institute": "https://autism.org/",
-        "National Institute of Mental Health": "https://www.nimh.nih.gov/"
+        "SG Enable": TRUSTED_SOURCE_URLS[0],
+        "Autism Research Institute": TRUSTED_SOURCE_URLS[1],
+        "National Institute of Mental Health": TRUSTED_SOURCE_URLS[2]
     },
     "features": [
         "24/7 AI chatbot for mental support through online conversations",

@@ -22,10 +22,14 @@ st.title("📊 Application Methodology and Flowcharts")
 # ============================================================
 st.header("🧭 User Interaction Flow")
 
-img_dir = Path("/mount/src/aibc_2026_aug/data")
-img_path = img_dir / "user_interaction.png"
-img = Image.open(img_path)
+file_path="data/user_interaction.png"
+
+#img_dir = Path("/mount/src/aibc_2026_aug/data")
+#img_path = img_dir / "user_interaction.png"
+#img = Image.open(img_path)
+img = Image.open(file_path)
 st.image(img, caption="User Interaction Flow", width=600)
+
 
 # ============================================================
 # 🔁 MASTER LIFECYCLE DIAGRAM
@@ -38,11 +42,12 @@ from data ingestion to final response display.
 It visually connects all five use cases into one continuous lifecycle.
 """)
 
-img_path = img_dir / "master_lifecycle_rag.png"
-img = Image.open(img_path)
+file_path="data/master_lifecycle_rag.png"
+#img_path = img_dir / "master_lifecycle_rag.png"
+img = Image.open(file_path)
 st.image(img, caption="Master Lifecycle Diagram", width=600)
 
-with open(img_path, "rb") as f:
+with open(file_path, "rb") as f:
     st.download_button(
         "⬇️ Download Master Lifecycle Diagram",
         f,
@@ -152,8 +157,9 @@ flowchart TD
     F --> G[Session state updated]
     G --> H[Ready for RAG queries]
 """
-img_path = img_dir / "usecase_1.png"
-img = Image.open(img_path)
+#img_path = img_dir / "usecase_1.png"
+file_path="data/usecase_1.png"
+img = Image.open(file_path)
 st.image(img, caption="Use Case 1: PDF Upload & Indexing", width=600)
 show_flowchart("📄 Use Case 1: PDF Upload & Indexing", pdf_flow, "usecase1_pdf_upload.dot")
 
