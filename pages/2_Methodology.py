@@ -24,7 +24,11 @@ tab1, tab2, tab3 = st.tabs(["📊 Data Flows", "⚙️ Implementation Details", 
 # -------------------------------
 with tab1:
     st.header("📊 Data Flow Overview")
-    st.image("data/dataflow.png", caption="Data Flow", width=700)
+    st.markdown("### Use Case A: Crawling URLs")
+    # use case 1: URL Input and Crawling
+    file_path="data/dataflow.png"
+    img = Image.open(file_path)
+    st.image(img, caption="Data Flow", width=700)
     data_flows_text = """
     1. **Input Sources**
        - 🌐 User-provided URLs (crawled internally)
