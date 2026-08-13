@@ -39,8 +39,8 @@ project = {
     ],
     "members": [
         "Caroline Chua",
-        "Raymond Sng",
-        "May Chua"
+        "May Chua",        
+        "Raymond Sng"
     ],
     "real_world_problem": {
         "problem_statement": (
