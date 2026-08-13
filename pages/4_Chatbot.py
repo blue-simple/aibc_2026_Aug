@@ -148,7 +148,7 @@ def chatbot_page():
                             extend_resource_store(url_chunks, persist_mode=persist_mode)
                             st.success(f"Ready! Indexed {len(st.session_state.resource_documents)} combined resource chunks.")
             else:
-                st.info("Input one or more URLs to enable document Q&A.")
+                st.info("Input one or more URLs to enable Q&A.")
 
         
         with st.expander("📑 Upload PDF", expanded=False):
