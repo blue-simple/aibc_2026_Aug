@@ -104,9 +104,3 @@ st.write(rw["problem_statement"])
 st.markdown("**How This Chatbot Helps**")
 for i, point in enumerate(rw["how_it_helps"], 1):
     st.write(f"{i}. {point}")
-
-st.markdown("---")
-st.info(
-    "💡 **A Note on Limitations** \n\n" + rw["disclaimer"]
-)
-
