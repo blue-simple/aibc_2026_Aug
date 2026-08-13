@@ -89,16 +89,16 @@ with tab3:
    st.header("🔄 Flowcharts")
 
    st.markdown("### Use Case 1: Crawling URLs")
-   st.image("data/usecase1_crawlingURL.png", caption="🌐 Use Case 1: URL Input & Crawling", use_column_width=True)
+   st.image("data/usecase1_crawlingURL.png", caption="🌐 Use Case 1: URL Input & Crawling", width=500)
    st.markdown("---")  # Optional divider between images
    st.markdown("### Use Case 2: Uploading PDFs")
-   st.image("data/usecase2_uploadPDF.png", caption="📑 Use Case 2: PDF Upload", use_column_width=True)
+   st.image("data/usecase2_uploadPDF.png", caption="📑 Use Case 2: PDF Upload", width=500)
    st.markdown("---")  # Optional divider between images
    st.markdown("### Use Case 3: Querying the Chatbot")
    st.image("data/usecase3_queryingChatbot.png", caption="💬 Use Case 3: Querying the Chatbot", use_column_width=True)
    st.markdown("---")  # Optional divider between images   
    st.markdown("### Use Case 4: Fact-Checking")
-   st.image("data/usecase4_factchecking.png", caption="✅ Use Case 4: Fact-Checking", use_column_width=True)
+   st.image("data/usecase4_factchecking.png", caption="✅ Use Case 4: Fact-Checking", width=300)
 
 #    st.markdown("### Use Case 1: Crawling URLs")
 #    st.image("data/usecase1_crawlingURL.png", caption="🌐 Use Case 1: URL Input & Crawling", use_column_width=True)
