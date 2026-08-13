@@ -98,7 +98,7 @@ with tab3:
    st.image("data/usecase3_queryingChatbot.png", caption="💬 Use Case 3: Querying the Chatbot", use_column_width=True)
    st.markdown("---")  # Optional divider between images   
    st.markdown("### Use Case 4: Fact-Checking")
-   st.image("data/usecase4.png", caption="✅ Use Case 4: Fact-Checking", width=500)
+   st.image("data/usecase4_factchecking.png", caption="✅ Use Case 4: Fact-Checking", width=500)
 
 #    st.markdown("### Use Case 1: Crawling URLs")
 #    st.image("data/usecase1_crawlingURL.png", caption="🌐 Use Case 1: URL Input & Crawling", use_column_width=True)
