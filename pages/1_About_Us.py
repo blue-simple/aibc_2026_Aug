@@ -30,8 +30,8 @@ project = {
     ],
     "data_sources": {
         "SG Enable": TRUSTED_SOURCE_URLS[0],
-        "Autism Research Institute": TRUSTED_SOURCE_URLS[1],
-        "National Institute of Mental Health": TRUSTED_SOURCE_URLS[2]
+        "Autism Research Institute": TRUSTED_SOURCE_URLS[2],
+        "National Institute of Mental Health": TRUSTED_SOURCE_URLS[1]
     },
     "features": [
         "24/7 AI chatbot for mental support through online conversations",
