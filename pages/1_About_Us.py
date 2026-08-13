@@ -38,9 +38,9 @@ project = {
         "User-friendly interface customised for autistic patients"
     ],
     "members": [
-        "Caroline Chua",
-        "May Chua",        
-        "Raymond Sng"
+        "Chua Wei Shan",
+        "Chua Yee May",        
+        "Sng Boon Wei, Raymond"
     ],
     "real_world_problem": {
         "problem_statement": (
