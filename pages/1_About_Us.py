@@ -30,7 +30,7 @@ project = {
     ],
     "data_sources": {
         "SG Enable": TRUSTED_SOURCE_URLS[0],
-        "Autism Research Institute": TRUSTED_SOURCE_URLS[2],
+        "Autism Resource Centre (Singapore)": TRUSTED_SOURCE_URLS[2],
         "National Institute of Mental Health": TRUSTED_SOURCE_URLS[1]
     },
     "features": [
