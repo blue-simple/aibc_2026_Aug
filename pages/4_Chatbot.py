@@ -42,7 +42,7 @@ if "temperature" not in st.session_state:
 #    st.session_state["loaded_urls"] = []
 
 # -------------------------------
-# Reload Chroma index at startup
+# Persistence & Vectorstore: Reload Chroma index at startup
 # -------------------------------
 if "vectorstore" not in st.session_state:
     embeddings = OpenAIEmbeddings(
@@ -82,7 +82,7 @@ system_prompt_no_doc = (
 )
 
 # -------------------------------
-# Chatbot Page
+# Chatbot Page (UI + Flow)
 # -------------------------------
 def chatbot_page():
     st.title("Chatbot for Autism related queries")
