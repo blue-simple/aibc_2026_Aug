@@ -17,7 +17,7 @@ def home_page():
     with st.expander("**Disclaimer**", expanded=False):
         st.markdown(
             """
-            <div style="background-color:#e6f2ff; padding:15px; border-radius:5px;">
+            <div style="background-color:#e6f2ff; padding:15px; border-radius:5px; margin-bottom:20px;">
             <strong>IMPORTANT NOTICE:</strong> This web application is a prototype developed for <strong>educational purposes only</strong>.  
             The information provided here is <strong>NOT intended for real-world usage</strong> and should not be relied upon for making any decisions, especially those related to financial, legal, or healthcare matters.
             <br><br>
